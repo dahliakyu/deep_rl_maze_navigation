@@ -178,11 +178,26 @@ def train(env, agent, episodes=1000, max_steps=100, target_update_freq=10):
     print("Best Path Reward:", best_reward)
     env.render(best_path)
 
-# Initialize environment and agent
-env = MazeEnv()
-state_size = 2  # (x, y) coordinates
-action_size = 4  # Up, Down, Left, Right
-agent = DQNAgent(state_size, action_size)
+    return best_reward
 
-# Train the agent
-train(env, agent, episodes=1000)
+for epsilon_decay_factors in range(9950, 9996, 1):
+    learn = 0.001
+    gamma = 0.99
+    epsilon = 1
+    reward = 0
+    best_parameters = []
+    # Initialize environment and agent
+    epsilon_decay = epsilon_decay_factors / 10000
+    print(epsilon_decay)
+    env = MazeEnv()
+    state_size = 2  # (x, y) coordinates
+    action_size = 4  # Up, Down, Left, Right
+    agent = DQNAgent(state_size, action_size, learn, gamma, epsilon, epsilon_decay)
+
+    # Train the agent
+    best_reward = train(env, agent, episodes=1000)
+    if reward <= best_reward:
+        best_parameters = [learn, gamma, epsilon, epsilon_decay]
+
+    print(best_parameters)
+
