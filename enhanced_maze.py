@@ -18,25 +18,126 @@ class EnhancedMazeEnv:
 
         self.wall_ratio = wall_ratio
         self.num_walls = int(self.wall_ratio * size * size)
-
         self.current_state = self.start
+
+        # Initial random generation
         self._generate_valid_maze()
 
     def set_wall_ratio(self, new_ratio):
         """
-        Adjust the wall ratio and regenerate a valid maze.
+        Incrementally raise the wall ratio using a BFS‐aware approach:
+          1. Ensure we don't reduce the ratio or do nothing if we already exceed it.
+          2. If no path currently, attempt a small random fix to open one.
+          3. BFS from start->goal to identify a path. Also protect neighbors for
+             a more organic shape.
+          4. Fill other free cells with walls until we reach new_ratio.
+          5. Validate. If blocked, remove some newly added walls or do a small fix.
         """
+        desired_wall_count = int(new_ratio * self.size * self.size)
+        current_wall_count = np.sum(self.maze == 1)
+
+        # If new ratio is lower or we already exceed it, just update ratio field
+        if desired_wall_count <= current_wall_count:
+            self.wall_ratio = new_ratio
+            return
+
+        # If no valid path exists, do a small random fix first
+        if not self._has_valid_path():
+            for _ in range(30):
+                if self._adjust_walls() and self._has_valid_path():
+                    break
+
+        # BFS path from start->goal
+        path_cells = self._bfs_path(self.start, self.goal)
+        if not path_cells:
+            # If still no path, fallback to random approach for a fresh start
+            self.wall_ratio = new_ratio
+            self.num_walls = desired_wall_count
+            self._generate_valid_maze()
+            return
+
+        # Combine path + neighbors as "protected_set"
+        protected_set = set(path_cells)
+        protected_set.update(self._get_neighbors_of_path(path_cells))
+
+        # Figure out how many new walls we must add
+        needed = desired_wall_count - current_wall_count
+
+        # Potential free cells that are NOT in protected_set
+        candidates = []
+        for x in range(self.size):
+            for y in range(self.size):
+                if (x, y) not in protected_set and self.maze[x, y] == 0:
+                    if (x, y) not in [self.start, self.goal]:
+                        candidates.append((x, y))
+
+        random.shuffle(candidates)
+        added = 0
+        # Place new walls among these candidates
+        for (cx, cy) in candidates:
+            if added >= needed:
+                break
+            self.maze[cx, cy] = 1
+            added += 1
+
+        # Validate. If path is blocked, remove some newly added walls
+        if not self._has_valid_path():
+            remove_count = added // 2
+            for i in range(remove_count):
+                rx, ry = candidates[added - 1 - i]
+                self.maze[rx, ry] = 0
+
+            # Attempt small random fix-ups
+            for _ in range(20):
+                if self._adjust_walls() and self._has_valid_path():
+                    break
+
+        # Finally, update the ratio
         self.wall_ratio = new_ratio
-        self.num_walls = int(self.wall_ratio * self.size * self.size)
-        self._generate_valid_maze()
+
+    def _bfs_path(self, start, goal):
+        """
+        Return a path list of cells from start->goal if BFS finds a route;
+        otherwise return empty list.
+        """
+        from collections import deque
+        visited = set()
+        queue = deque([(start, [start])])
+
+        while queue:
+            (cx, cy), path = queue.popleft()
+            if (cx, cy) == goal:
+                return path
+            if (cx, cy) in visited:
+                continue
+            visited.add((cx, cy))
+
+            for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nx, ny = cx+dx, cy+dy
+                if 0 <= nx < self.size and 0 <= ny < self.size:
+                    if self.maze[nx, ny] != 1 and (nx, ny) not in visited:
+                        queue.append(((nx, ny), path+[(nx, ny)]))
+        return []
+
+    def _get_neighbors_of_path(self, path_cells):
+        """
+        Gather free neighbor cells around the BFS path so it's not a tight corridor.
+        """
+        neighbors = set()
+        for (x, y) in path_cells:
+            for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nx, ny = x+dx, y+dy
+                if 0 <= nx < self.size and 0 <= ny < self.size:
+                    if self.maze[nx, ny] == 0 and (nx, ny) not in path_cells:
+                        neighbors.add((nx, ny))
+        return neighbors
 
     def _generate_valid_maze(self, max_adjust_attempts=5):
         """
-        Randomly create a maze with a valid path from start to goal.
+        Randomly create a valid maze from scratch for initial usage.
         """
         valid_maze = False
         attempts = 0
-
         while not valid_maze and attempts < 200:
             self._randomize_walls()
             if self._has_valid_path():
@@ -48,14 +149,13 @@ class EnhancedMazeEnv:
                         break
             attempts += 1
 
-        # Mark the goal cell explicitly
+        # Mark goal cell explicitly
         self.goal = (self.size - 1, self.size - 1)
         self.maze[self.goal] = 9
 
     def _randomize_walls(self):
         """
-        Fill the maze with self.num_walls randomly placed walls,
-        except on start and goal.
+        Fill the maze with self.num_walls randomly placed walls for initial creation.
         """
         self.maze.fill(0)
         placed = 0
@@ -67,8 +167,7 @@ class EnhancedMazeEnv:
 
     def _adjust_walls(self):
         """
-        Removes two walls and adds two walls randomly,
-        then checks if there's a valid path.
+        Removes two walls and adds two walls randomly, then sees if that unblocks a path.
         """
         wall_positions = list(zip(*np.where(self.maze == 1)))
         if len(wall_positions) < 2:
@@ -114,21 +213,22 @@ class EnhancedMazeEnv:
 
     def step(self, action, visited=None):
         """
-        Reward logic:
-          - Hitting a wall => -1.0
-          - Valid move => -0.01
-          - Reaching goal => +10.0
-          - Revisiting the same cell => -0.02
+        Stricter Reward logic to slow quick success:
+          - Hitting a wall => -2.0
+          - Valid move => -0.02
+          - Reaching goal => +8.0
+          - Revisiting => -0.05
         """
-        wall_penalty = -1.0
-        step_penalty = -0.01
-        goal_reward = 10.0
-        revisit_penalty = -0.02
+        wall_penalty = -2.0
+        step_penalty = -0.02
+        goal_reward = 8.0
+        revisit_penalty = -0.05
 
         old_x, old_y = self.current_state
         x, y = old_x, old_y
-
         reward = step_penalty
+
+        # Attempt the move
         if action == 0:  # Up
             if x > 0 and self.maze[x - 1, y] != 1:
                 x -= 1
@@ -152,39 +252,51 @@ class EnhancedMazeEnv:
 
         self.current_state = (x, y)
 
-        # Extra penalty if revisiting a cell in the same episode
+        # Penalty for revisiting same cell in same episode
         if visited is not None and self.current_state in visited:
             reward += revisit_penalty
 
-        if self.current_state == self.goal:
+        # If goal, big reward
+        done = (self.current_state == self.goal)
+        if done:
             return self.current_state, goal_reward, True
         else:
             return self.current_state, reward, False
 
     def render(self, ax=None, show_current=False):
+        """
+        Basic grid rendering with S, G, and an optional 'current position' dot.
+        """
         if ax is None:
             fig, ax = plt.subplots(figsize=(7, 7))
 
+        # Colors: 0=white, 1=gray, 9=goal => forced to green
         colors = ['white', 'gray', 'green']
         cmap = ListedColormap(colors)
+
         vis_maze = self.maze.copy()
-        vis_maze[vis_maze == 9] = 2  # Mark goal as green
+        # Cells marked '9' become '2' in the colormap => green
+        vis_maze[vis_maze == 9] = 2
         ax.imshow(vis_maze, cmap=cmap)
 
+        # Draw grid lines
         for i in range(self.size + 1):
             ax.axhline(i - 0.5, color='black', linewidth=1)
             ax.axvline(i - 0.5, color='black', linewidth=1)
 
+        # Mark start
         sx, sy = self.start
         ax.text(sy, sx, 'S', ha='center', va='center', fontsize=20, color='blue')
 
+        # Mark goal
         gx, gy = self.goal
         ax.text(gy, gx, 'G', ha='center', va='center', fontsize=20, color='white')
 
+        # Optionally show agent's current position
         if show_current:
             cx, cy = self.current_state
-            patch = patches.Circle((cy, cx), 0.3, color='red')
-            ax.add_patch(patch)
+            circle = patches.Circle((cy, cx), 0.3, color='red')
+            ax.add_patch(circle)
 
         ax.set_xticks(range(self.size))
         ax.set_yticks(range(self.size))
@@ -301,7 +413,6 @@ class QLearningAgent:
         ax.set_title("Agent Path")
         return ax
 
-
 # --------------------------------------
 # Utility to capture Q-value snapshot
 # --------------------------------------
@@ -317,7 +428,6 @@ def capture_q_snapshot(agent, title=""):
         img_array = img_array[:, :, :3]  # drop alpha channel if present
     plt.close(fig)
     return img_array
-
 
 def create_collage(snapshots, ratios_order):
     """
@@ -335,13 +445,11 @@ def create_collage(snapshots, ratios_order):
         ax = axes[i]
         ep, img_array = snapshots[ratio]
         ax.imshow(img_array)
-        # For display, multiply ratio by 100
         ax.set_title(f"{int(ratio*100)}% Walls (Ep={ep})")
         ax.axis('off')
 
     fig.tight_layout()
     return fig
-
 
 if __name__ == "__main__":
 
@@ -354,7 +462,7 @@ if __name__ == "__main__":
     max_episodes = 5000
     max_steps_per_episode = 300
 
-    # Rolling success window is now 50 episodes
+    # Rolling success window is 50 episodes
     success_deque = deque(maxlen=50)
     success_threshold = 0.8
 
@@ -377,8 +485,9 @@ if __name__ == "__main__":
             total_reward += reward
             steps += 1
 
+            # Now we penalize even more on timeout
             if steps >= max_steps_per_episode and not done:
-                total_reward -= 5.0
+                total_reward -= 10.0  # was -5.0
                 done = True
 
         agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
@@ -390,7 +499,7 @@ if __name__ == "__main__":
         agent.success_history.append(1 if (state == env.goal) else 0)
         success_deque.append(1 if (state == env.goal) else 0)
 
-        # Now we check if we have 50 episodes in the success window
+        # Check success rate over the last 50 episodes
         if len(success_deque) == 50:
             success_rate = sum(success_deque) / 50.0
             # If threshold is reached, move to next ratio
@@ -401,27 +510,27 @@ if __name__ == "__main__":
 
                 new_ratio = wall_ratios[ratio_index + 1]
                 print(
-                    f"Success threshold of {success_rate*100:.1f}% reached at Episode {episode}.\n"
-                    f"Raising walls from {int(current_ratio*100)}% to {int(new_ratio*100)}%."
+                    f"Success threshold of {success_rate*100:.1f}% at Episode {episode}.\n"
+                    f"Adding more walls: {int(current_ratio*100)}% -> {int(new_ratio*100)}%."
                 )
 
                 ratio_index += 1
                 env.set_wall_ratio(new_ratio)
                 success_deque.clear()
 
-        # Print logs every 100 episodes (unchanged from before)
-        if episode % 100 == 0:
-            recent_rewards = agent.rewards_history[-100:]
+        # Print logs every 50 episodes (instead of 100)
+        if episode % 50 == 0:
+            recent_rewards = agent.rewards_history[-50:]
             avg_reward = sum(recent_rewards) / len(recent_rewards)
-            recent_steps = agent.steps_history[-100:]
+            recent_steps = agent.steps_history[-50:]
             avg_steps = sum(recent_steps) / len(recent_steps)
-            recent_success = agent.success_history[-100:]
-            success_rate_100 = sum(recent_success) / len(recent_success) * 100
+            recent_success = agent.success_history[-50:]
+            success_rate_50 = sum(recent_success) / len(recent_success) * 100
             print(f"[Episode {episode}] Ratio: {env.wall_ratio*100:.0f}%, "
                   f"AvgReward: {avg_reward:.2f}, AvgSteps: {avg_steps:.2f}, "
-                  f"SuccessRate(100ep): {success_rate_100:.1f}%")
+                  f"SuccessRate(50ep): {success_rate_50:.1f}%")
 
-        # If at final ratio, stop if threshold is again met
+        # If we're at the final ratio, stop once we see threshold again
         if ratio_index == len(wall_ratios) - 1:
             if len(success_deque) == 50:
                 final_success_rate = sum(success_deque) / 50.0
@@ -432,8 +541,7 @@ if __name__ == "__main__":
                     snapshots[current_ratio] = (episode, snap_img)
                     break
 
-    # If training ends without hitting final break,
-    # take a snapshot of the final ratio
+    # If we exit the loop without hitting break, take a final snapshot
     if wall_ratios[ratio_index] not in snapshots:
         snap_img = capture_q_snapshot(agent, title=f"{int(wall_ratios[ratio_index]*100)}% Walls (end)")
         snapshots[wall_ratios[ratio_index]] = (max_episodes, snap_img)
@@ -444,7 +552,7 @@ if __name__ == "__main__":
     collage_fig.savefig("./curriculum_results/ratio_milestones_collage.png")
     plt.close(collage_fig)
 
-    # Save & show progress figure
+    # Save & show progress
     fig_progress, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5))
     ax1.plot(agent.rewards_history, alpha=0.5)
     ax1.set_xlabel('Episode')
