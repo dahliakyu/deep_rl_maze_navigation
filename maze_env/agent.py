@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+import torch
 
 class Agent(ABC):
     """
@@ -66,58 +67,53 @@ class Agent(ABC):
         return fig
 
     def visualize_q_values(self, ax):
-        """
-        Visualizes only the highest Q-value (if it's > 1) with a larger arrow.
+         grid_size = self.env.grid_size
+         actions = ["Up", "Down", "Left", "Right"]  # Action labels
+         ax.clear() # Clear axes
 
-        Args:
-            ax (matplotlib.axes._axes.Axes): The axes object to draw on.
-        """
-        grid_size = self.env.grid_size
-        actions = ["Up", "Down", "Left", "Right"]  # Action labels
-        ax.clear() # Clear axes
+         # Render the base environment (maze)
+         cmap = ListedColormap(['white', 'gray', 'green'])
+         vis_maze = self.env.maze.copy()
+         vis_maze[vis_maze == 9] = 2
+         ax.imshow(vis_maze, cmap=cmap, origin='lower')
 
-        # Render the base environment (maze)
-        cmap = ListedColormap(['white', 'gray', 'green'])
-        vis_maze = self.env.maze.copy()
-        vis_maze[vis_maze == 9] = 2
-        ax.imshow(vis_maze, cmap=cmap, origin='upper')
+         # Iterate through each state
+         for i in range(grid_size[0]):
+             for j in range(grid_size[1]):
+                 state = (i, j)
+                 # Convert state to tensor and move to device for the network
+                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+                 if state_tensor != None:
+                     with torch.no_grad():
+                         q_values = self.q_network(state_tensor).cpu().numpy()[0]  # Get Q-values from the network
+                         best_action_idx = np.argmax(q_values)
+                         best_q_value = q_values[best_action_idx]
 
-        # Iterate through each state
-        for i in range(grid_size[0]):
-            for j in range(grid_size[1]):
-                state = (i, j)
-                if state in self.q_table:
-                    q_values = self.q_table[state]
-                    best_action_idx = np.argmax(q_values)
-                    best_q_value = q_values[best_action_idx]
+                         # Only display if the best Q-value is greater than 1
+                         if best_q_value > 1:
+                             dx, dy = 0, 0
+                             arrow_scale = 0.4  # Increased scale for better visibility
+                             if best_action_idx == 0:  # Up
+                                 dy = arrow_scale  #Flipped direction
+                             elif best_action_idx == 1:  # Down
+                                 dy = -arrow_scale #Flipped direction
+                             elif best_action_idx == 2:  # Left
+                                 dx = -arrow_scale
+                             elif best_action_idx == 3:  # Right
+                                 dx = arrow_scale
 
-                    # Only display if the best Q-value is greater than 1
-                    if best_q_value > 1:
-                        dx, dy = 0, 0
-                        arrow_scale = 0.4  # Increased scale for better visibility
-                        if best_action_idx == 0:  # Up
-                            dy = -arrow_scale
-                        elif best_action_idx == 1:  # Down
-                            dy = arrow_scale
-                        elif best_action_idx == 2:  # Left
-                            dx = -arrow_scale
-                        elif best_action_idx == 3:  # Right
-                            dx = arrow_scale
+                             arrow_color = 'blue' # Change the arrow color
 
-                        arrow_color = 'blue' # Change the arrow color
+                             # Draw the arrow for the best action
+                             ax.arrow(j, grid_size[0] -1 -i, dx, dy, head_width=0.15, head_length=0.15, fc=arrow_color, ec=arrow_color, alpha=0.8)  # Adjust head dimensions
+                            # Display the Q-value next to the arrow
+                             ax.text(j + 1.2 * dx, grid_size[0] -1 - i + 1.2 * dy, f"{best_q_value:.1f}", color='black', ha='center', va='center', fontsize=10)
 
-                        # Draw the arrow for the best action
-                        ax.arrow(j, i, dx, dy, head_width=0.15, head_length=0.15, fc=arrow_color, ec=arrow_color, alpha=0.8)  # Adjust head dimensions
-
-                        # Display the Q-value next to the arrow
-                        ax.text(j + 1.2 * dx, i + 1.2 * dy, f"{best_q_value:.1f}", color='black', ha='center', va='center', fontsize=10)
-
-        ax.set_xticks(np.arange(grid_size[1]))
-        ax.set_yticks(np.arange(grid_size[0]))
-        ax.set_xticklabels(np.arange(grid_size[1]))
-        ax.set_yticklabels(np.arange(grid_size[0]))
-        ax.set_title("Best Q-Values (> 1) and Policy")
-        ax.invert_yaxis() # Invert
+         ax.set_xticks(np.arange(grid_size[1]))
+         ax.set_yticks(np.arange(grid_size[0]))
+         ax.set_xticklabels(np.arange(grid_size[1]))
+         ax.set_yticklabels(np.arange(grid_size[0]))
+         ax.set_title("Best Q-Values (> 1) and Policy")
 
     def get_optimal_path(self):
         """
@@ -132,10 +128,13 @@ class Agent(ABC):
         path = [current_state]
 
         while current_state != goal_state:
-            if current_state not in self.q_table:
-                return None  # No path found
+            # Convert state to tensor and move to device for the network
+            state_tensor = torch.FloatTensor(current_state).unsqueeze(0).to(self.device)
 
-            best_action = np.argmax(self.q_table[current_state])
+            if state_tensor != None:
+                with torch.no_grad():
+                    q_values = self.q_network(state_tensor).cpu().numpy()[0]  # Get Q-values from the network
+                    best_action = np.argmax(q_values)
 
             # Determine the next state based on the action (you'll need to adapt this)
             x, y = current_state
@@ -170,16 +169,17 @@ class Agent(ABC):
         vis_maze = self.env.maze.copy()
         vis_maze[vis_maze == 9] = 2
 
-        ax.imshow(vis_maze, cmap=cmap, origin='upper')
+        ax.imshow(vis_maze, cmap=cmap, origin='lower') # Set origin to lower
 
         # Mark the path
         if path:
             path_x, path_y = zip(*path)
+            path_x = [grid_size[0] - 1 - x for x in path_x]
             ax.plot(path_y, path_x, marker='o', color='red', markersize=8, linestyle='-', linewidth=2)
 
         # Mark the start and goal
-        ax.text(self.env.start[1], self.env.start[0], 'S', ha='center', va='center', color='blue', fontsize=12)
-        ax.text(self.env.goal[1], self.env.goal[0], 'G', ha='center', va='center', color='white', fontsize=12)
+        ax.text(self.env.start[1], grid_size[0] - 1 - self.env.start[0], 'S', ha='center', va='center', color='blue', fontsize=12)
+        ax.text(self.env.goal[1], grid_size[0] - 1 - self.env.goal[0], 'G', ha='center', va='center', color='white', fontsize=12)
 
         ax.set_title("Optimal Path")
         ax.set_xticks(np.arange(grid_size[1]))

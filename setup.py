@@ -7,6 +7,9 @@ setup(
     install_requires=[
         'numpy',
         'matplotlib',
+        'torch',
+        'keras',
+        'tensorflow',
     ],
     author='Ellen Zheng',
     author_email='lamiyavi@hotmail.com',

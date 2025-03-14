@@ -6,3 +6,6 @@ Author: Ellen Zheng
 Author-email: lamiyavi@hotmail.com
 Requires-Dist: numpy
 Requires-Dist: matplotlib
+Requires-Dist: torch
+Requires-Dist: keras
+Requires-Dist: tensorflow
