@@ -1,0 +1,4 @@
+/test_codes/attempted_keras_optimisations/models/
+/experiments/results/
+*.deb
+**/__pycache__/
