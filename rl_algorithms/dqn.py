@@ -1,122 +1,100 @@
 import numpy as np
 import random
 from collections import deque
-import keras
-from keras.models import Sequential
-from keras.layers import Dense, Input, Dropout, BatchNormalization
-from keras.optimizers import Adam  
-from keras.regularizers import l1_l2, l2
-import tensorflow as tf
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
 from util import RunningStats
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+class QNetwork(nn.Module):
+    def __init__(self, state_size, action_size):
+        super(QNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_size, 32)
+        self.fc2 = nn.Linear(32, 32)
+        self.fc3 = nn.Linear(32, action_size)
+        
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
 class DQNAgent:
-    def __init__(self, state_size, action_size, learning_rate=0.001, gamma=0.99,
-                 epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1,
-                 replay_buffer_size=10000,  # Increased replay buffer
-                 batch_size=64,          # Increased batch size
-                 target_update_freq=10): # Update target network every 10 steps
+    def __init__(self, state_size, action_size, learning_rate=0.001, gamma=0.95,
+                 epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.05,
+                 replay_buffer_size=20000, batch_size=128, target_update_freq=100):
+        
         self.state_size = state_size
         self.action_size = action_size
-        self.learning_rate = learning_rate
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
-#        self.reward_stats = RunningStats()
-        self.eps = 1e-8  # Numerical stability
-        # Memory buffer
-        self.replay_buffer = deque(maxlen=replay_buffer_size) # Use provided size
-        self.batch_size = batch_size  # Use provided batch size
+        self.batch_size = batch_size
         self.target_update_freq = target_update_freq
-        self.train_step = 0 # Counter for training steps
+        self.train_step = 0
 
-        # Create main and target networks
-        self.q_network = self._build_model()
-        self.target_network = self._build_model()
-        self.update_target_network()  # Initialize target network weights
-    
-    def _process_reward(self, reward):
-        self.reward_stats.update(reward)
-        return (reward - self.reward_stats.mean) / (self.reward_stats.std + self.eps)
-    
-    def _build_model(self):
-        model = Sequential()
-        model.add(Input(shape=(self.state_size,)))
+        # Q-Networks
+        self.q_network = QNetwork(state_size, action_size).to(device)
+        self.target_network = QNetwork(state_size, action_size).to(device)
+        self.target_network.load_state_dict(self.q_network.state_dict())
         
-        # First hidden layer with combined regularization
-        model.add(Dense(128, 
-                    activation='relu',
-                    kernel_regularizer=l1_l2(l1=0.0005, l2=0.001),  # L1+L2 reg
-                    bias_regularizer=l2(0.001)))
-        model.add(BatchNormalization())  # Add batch norm
-        model.add(Dropout(0.3))  # Add dropout
-        
-        # Second hidden layer
-        model.add(Dense(128,
-                    activation='relu',
-                    kernel_regularizer=l1_l2(l1=0.0005, l2=0.001),
-                    bias_regularizer=l2(0.001)))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.2))  # Less dropout in deeper layers
-        
-        # Output layer
-        model.add(Dense(self.action_size, activation='linear'))
-        
-        # Optimizer with adjusted parameters
-        optimizer = Adam(learning_rate=self.learning_rate,
-                        clipnorm=1.0)  # Add value clipping
-        
-        model.compile(optimizer=optimizer,
-                    loss='huber',  # Explicit huber loss
-                    metrics=['mae'])  # Track mean absolute error
-        return model
+        # Optimizer
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
+        self.loss_fn = nn.HuberLoss()
+
+        # Replay buffer
+        self.replay_buffer = deque(maxlen=replay_buffer_size)
 
     def store_experience(self, state, action, reward, next_state, done):
-#        processed_reward = self._process_reward(reward)
         self.replay_buffer.append((state, action, reward, next_state, done))
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
+        
+        state = torch.FloatTensor(state).unsqueeze(0).to(device)
+        with torch.no_grad():
+            q_values = self.q_network(state)
+        return q_values.argmax().item()
 
-        state = np.array(state).reshape(1, -1)  # Reshape for Keras input
-        q_values = self.q_network.predict(state, verbose=0)
-        return np.argmax(q_values[0])
-
-
-    @tf.function # Decorator for performance (very important for training speed)
     def replay(self):
         if len(self.replay_buffer) < self.batch_size:
             return
 
-        # Sample random batch
+        # Sample batch from replay buffer
         batch = random.sample(self.replay_buffer, self.batch_size)
-        states = np.array([i[0] for i in batch])
-        actions = np.array([i[1] for i in batch])
-        rewards = np.array([i[2] for i in batch])
-        next_states = np.array([i[3] for i in batch])
-        dones = np.array([i[4] for i in batch])
+        states, actions, rewards, next_states, dones = zip(*batch)
 
-        # Calculate targets - Vectorized for efficiency
-        next_q_values = self.target_network.predict(next_states, verbose=0)
-        targets = rewards + self.gamma * np.max(next_q_values, axis=1) * (1 - dones) # Vectorized
+        # Convert to tensors
+        states = torch.FloatTensor(np.array(states)).to(device)
+        actions = torch.LongTensor(np.array(actions)).to(device)
+        rewards = torch.FloatTensor(np.array(rewards)).to(device)
+        next_states = torch.FloatTensor(np.array(next_states)).to(device)
+        dones = torch.FloatTensor(np.array(dones)).to(device)
 
-        # Predict Q values for the current state and action
-        q_values = self.q_network.predict(states, verbose=0)
+        # Current Q values
+        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
 
-        # Update the Q values for the actions taken
-        for i in range(self.batch_size):
-            q_values[i][actions[i]] = targets[i]
+        # Target Q values
+        with torch.no_grad():
+            next_q = self.target_network(next_states).max(1)[0]
+            target_q = rewards + self.gamma * next_q * (1 - dones)
 
-        # Train the network
-        self.q_network.fit(states, q_values, epochs=1, verbose=0)
-        
+        # Compute loss
+        loss = self.loss_fn(current_q, target_q)
+
+        # Optimize the model
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        # Update target network
         self.train_step += 1
         if self.train_step % self.target_update_freq == 0:
-            self.update_target_network()  # Update target network
-
-    def update_target_network(self):
-        self.target_network.set_weights(self.q_network.get_weights())
+            self.target_network.load_state_dict(self.q_network.state_dict())
 
     def update_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

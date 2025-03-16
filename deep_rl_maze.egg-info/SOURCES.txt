@@ -7,9 +7,15 @@ deep_rl_maze.egg-info/requires.txt
 deep_rl_maze.egg-info/top_level.txt
 experiments/__init__.py
 experiments/dqn_experiment.py
+experiments/dqn_graph_only.py
+experiments/dqn_hyperparameter_search.py
+experiments/hyperparameter_plot.py
+experiments/optimised_dqn_experiment.py
 experiments/simple_q_table_experiment.py
 rl_algorithms/__init__.py
 rl_algorithms/dqn.py
+rl_algorithms/dqn_graph_mode.py
 rl_algorithms/dqn_torch.py
+rl_algorithms/optimised_dqn.py
 rl_algorithms/sarsa.py
 rl_algorithms/simple_q_table.py

@@ -18,7 +18,7 @@ class QLearningAgent:
         self.alpha = alpha  # Learning rate
         self.gamma = gamma  # Discount factor
         self.epsilon = epsilon  # Exploration factor
-        self.q_table = np.zeros((9, 9, 4))  # Q-table initialized to zeros. Dimensions: (rows, columns, actions)
+        self.q_table = np.zeros((5, 5, 4))  # Q-table initialized to zeros. Dimensions: (rows, columns, actions)
         # self.q_table[state, action] stores the Q-value for taking 'action' in 'state'
         self.rewards_history = []  # List to store total rewards for each episode
         self.steps_history = []    # List to store number of steps taken in each episode
@@ -114,8 +114,8 @@ class QLearningAgent:
         self.env.render(ax)
 
         # Add arrows to show optimal action in each state
-        for i in range(9): # Iterate through rows
-            for j in range(9): # Iterate through columns
+        for i in range(5): # Iterate through rows
+            for j in range(5): # Iterate through columns
                 if self.env.maze[i, j] == 1:  # Skip walls, no action needed in wall states
                     continue
 

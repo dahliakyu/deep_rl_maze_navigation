@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Main Training Loop with Visualization
-env = ComplexMazeEnv(maze_file='maze_16x16.json') # Create an instance of the Maze environment
+env = ComplexMazeEnv(maze_file='maze_5_5_mid.json') # Create an instance of the Maze environment
 agent = QLearningAgent(env) # Create an instance of the Q-Learning agent, connected to the environment
 episodes = 1000  # Number of episodes to train the agent for
 
@@ -60,14 +60,14 @@ ax = fig.add_subplot(111, projection='3d') # Add a 3D subplot to the figure
 max_q_values = np.max(agent.q_table, axis=2) # Find the maximum Q-value for each state across all actions (axis=2 represents actions)
 
 # Create coordinate grids for plotting the 3D surface
-x = np.arange(9) # x-coordinates (columns)
-y = np.arange(9) # y-coordinates (rows)
+x = np.arange(5) # x-coordinates (columns)
+y = np.arange(5) # y-coordinates (rows)
 x, y = np.meshgrid(x, y) # Create a meshgrid from x and y coordinates
 
 # Prepare Z-data (Q-values) for the surface plot, masking out walls
 z = max_q_values.copy() # Copy the max Q-values
-for i in range(9): # Iterate through rows
-    for j in range(9): # Iterate through columns
+for i in range(5): # Iterate through rows
+    for j in range(5): # Iterate through columns
         if env.maze[i, j] == 1:  # If it's a wall
             z[i, j] = 0 # Set Q-value to 0 for walls so they appear at the base of the plot
 

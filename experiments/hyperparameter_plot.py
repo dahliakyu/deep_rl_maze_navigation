@@ -99,13 +99,12 @@ def plot_hyperparameter_comparisons(directory='./'):
                 ax_reward.grid(True)
 
             # Add legend to the first subplot in each row
-            if j == 0:
                 ax_step.legend(loc='upper right')
                 ax_reward.legend(loc='lower right')
 
     plt.tight_layout()
-    fig_steps.savefig('hyperparameter_steps_comparison.png', dpi=300, bbox_inches='tight')
-    fig_rewards.savefig('hyperparameter_rewards_comparison.png', dpi=300, bbox_inches='tight')
+    fig_steps.savefig('hyperparameter_steps_comparison.pdf', dpi=300, bbox_inches='tight')
+    fig_rewards.savefig('hyperparameter_rewards_comparison.pdf', dpi=300, bbox_inches='tight')
 
 if __name__ == "__main__":
     plot_hyperparameter_comparisons()

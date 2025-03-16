@@ -8,8 +8,7 @@ setup(
         'numpy',
         'matplotlib',
         'torch',
-        'keras',
-        'tensorflow',
+        'keras'
     ],
     author='Ellen Zheng',
     author_email='lamiyavi@hotmail.com',

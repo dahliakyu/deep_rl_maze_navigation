@@ -22,7 +22,7 @@ The project has utilised AI tools including copilot and Gemini 2.0 Flash for the
 - add comments and docstrings to the code base
 - code optimisation and refractoring
 - maze generation
-- enhanced visuals in visualisations such as colour and heat map settings
+- enhanced visuals in visualisations such as customised colour and heat map settings
 - debugging process:
     - hyperparameter adjustment suggestions for undesirable tranining results
-    - extremely slow training speed with keras
+    - improving extremely slow training speed with keras
