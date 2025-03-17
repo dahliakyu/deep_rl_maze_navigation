@@ -1,16 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from rl_algorithms.dqn import DQNAgent
-from maze_env.environment import ComplexMazeEnv
+import sys
 import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from rl_algorithms.ddqn import DDQNAgent
+from maze_env.environment import ComplexMazeEnv
 import tensorflow as tf
 
 
-def train_dqn_agent(env, agent, num_episodes, update_target_every=50):
+def train_dqn_agent(env, agent, num_episodes, update_target_every=30):
     rewards_history = []
     steps_history = []
-    max_steps = 200
+    max_steps = 250
 
     for episode in range(num_episodes):
         state = env.reset()
@@ -149,44 +152,64 @@ def visualize_dqn_q_values(env, agent):
 # Main execution
 if __name__ == "__main__":
     # Initialize environment and agent
-    env = ComplexMazeEnv(maze_file='maze_16_16.json')
+    env = ComplexMazeEnv(maze_file='/Users/m.manso/Documents/GitHub/deep_rl_maze_navigation/maze_env/maze_16_16.json')# didnt work with normal path for me
     state_size = 2
     action_size = 4
     
-    agent = DQNAgent(
+    agent = DDQNAgent(
         state_size=state_size,
         action_size=action_size,
-        learning_rate=0.001,    # Increased learning rate
+        learning_rate=0.01,    # Increased learning rate
         gamma=0.99,            # Reduced gamma for shorter-term rewards
         epsilon=1.0,
-        epsilon_decay=0.9995,    # Faster exploration decay
+        epsilon_decay=0.99995,    # Faster exploration decay
         epsilon_min=0.01,      # Higher minimum exploration
+        batch_size=64
     )
     
     print("Starting DQN training...")
     start_time = time.time()
-    
+
     # Train the agent
-    rewards, steps = train_dqn_agent(env, agent, num_episodes=100)
-    
+    rewards, steps = train_dqn_agent(env, agent, num_episodes=300)
+
     print(f"Training completed in {(time.time() - start_time)/60:.2f} minutes")
-    
+
+    # Debug: Print rewards and steps
+    print("Rewards:", rewards)
+    print("Steps:", steps)
+
     # Create output directory if it doesn't exist
     os.makedirs('results', exist_ok=True)
-    
+
+    # Debug: Print current working directory and results path
+    print("Current Working Directory:", os.getcwd())
+    print("Results Directory:", os.path.abspath('results'))
+
     # Visualize training progress
-    learning_fig = visualize_learning(rewards, steps)
-    plt.savefig('results/dqn_learning_progress.png')
-    plt.close(learning_fig)
-    
+    try:
+        learning_fig = visualize_learning(rewards, steps)
+        plt.savefig('experiments/results/ddqn_q_learning.png')
+        plt.close(learning_fig)
+        print("Saved learning progress plot.")
+    except Exception as e:
+        print(f"Error saving learning progress: {e}")
+
     # Visualize optimal path
-    optimal_path = get_optimal_path(env, agent)
-    path_fig = visualize_path(env, optimal_path)
-    plt.savefig('results/dqn_final_result.png')
-    plt.close(path_fig)
-    
+    try:
+        optimal_path = get_optimal_path(env, agent)
+        path_fig = visualize_path(env, optimal_path)
+        plt.savefig('experiments/results/ddqn_q_path.png')
+        plt.close(path_fig)
+        print("Saved optimal path plot.")
+    except Exception as e:
+        print(f"Error saving optimal path: {e}")
+
     # Visualize Q-values
-    q_values_fig = visualize_dqn_q_values(env, agent)
-    plt.savefig('results/dqn_q_values.png')
-    plt.close(q_values_fig)
-    
+    try:
+        q_values_fig = visualize_dqn_q_values(env, agent)
+        plt.savefig('experiments/results/ddqn_q_values.png')
+        plt.close(q_values_fig)
+        print("Saved Q-values plot.")
+    except Exception as e:
+        print(f"Error saving Q-values: {e}")
