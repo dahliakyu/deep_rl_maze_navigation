@@ -1,16 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import torch
-from maze_env.environment import ComplexMazeEnv
+import sys
 import os
-from rl_algorithms.dqn import DQNAgent
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def train_dqn_agent(env, agent, num_episodes):
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from rl_algorithms.ddqn import DDQNAgent
+from maze_env.environment import ComplexMazeEnv
+import tensorflow as tf
+
+
+def train_dqn_agent(env, agent, num_episodes, update_target_every=30):
     rewards_history = []
     steps_history = []
-    max_steps = 500
+    max_steps = 250
 
     for episode in range(num_episodes):
         state = env.reset()
@@ -22,6 +25,7 @@ def train_dqn_agent(env, agent, num_episodes):
             action = agent.act(state)
             next_state, reward, done = env.step(action)
             
+            # Convert states to numpy arrays for neural network compatibility
             agent.store_experience(
                 np.array(state), 
                 action, 
@@ -35,10 +39,14 @@ def train_dqn_agent(env, agent, num_episodes):
             total_reward += reward
             steps += 1
 
+        if episode % update_target_every == 0:
+            agent.update_target_network()
+
         agent.update_epsilon()
 
-        if episode % 50 == 0: # Print episode completion status every 100 episodes
-            print(f"Episode {episode} complete. Total reward: {total_reward}, Steps: {steps}")
+        # Always show progress
+        print(f"Ep {episode+1:4d} | Reward {total_reward:7.2f} | "
+              f"Steps {steps:4d} | Eps {agent.epsilon:.3f}")
 
         rewards_history.append(total_reward)
         steps_history.append(steps)
@@ -48,11 +56,13 @@ def train_dqn_agent(env, agent, num_episodes):
 def visualize_learning(rewards_history, steps_history):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
+    # Plot rewards
     ax1.plot(rewards_history, label='Reward per Episode')
     ax1.set_xlabel('Episode')
     ax1.set_ylabel('Total Reward')
     ax1.set_title('Training Rewards')
     
+    # Plot steps
     ax2.plot(steps_history, label='Steps per Episode')
     ax2.set_xlabel('Episode')
     ax2.set_ylabel('Steps')
@@ -65,7 +75,7 @@ def get_optimal_path(env, agent):
     path = []
     state = env.reset()
     done = False
-    max_steps = 20
+    max_steps = 100
     steps = 0
     
     while not done and steps < max_steps:
@@ -82,8 +92,9 @@ def visualize_path(env, path):
     fig, ax = plt.subplots(figsize=(10, 10))
     env.render(ax=ax, show_current=False)
     
-    path_y = [p[1] for p in path]
-    path_x = [p[0] for p in path]
+    # Correctly handle the path coordinates
+    path_y = [p[1] for p in path]  # y coordinate is the second element
+    path_x = [p[0] for p in path]  # x coordinate is the first element
     
     ax.plot(path_y, path_x, 'o-', color='blue', markersize=10, alpha=0.6)
     
@@ -97,18 +108,13 @@ def visualize_dqn_q_values(env, agent):
     fig, ax = plt.subplots(figsize=(10, 10))
     env.render(ax=ax, show_current=False)
     
-    # Get device from network parameters
-    device = next(agent.q_network.parameters()).device
-    
     for x in range(env.size):
         for y in range(env.size):
             if env.maze[x, y] == 1:
                 continue
             
-            state = torch.FloatTensor([x, y]).unsqueeze(0).to(device)
-            with torch.no_grad():
-                q_values = agent.q_network(state).cpu().numpy()[0]
-                
+            state = np.array([x, y]).reshape(1, -1)
+            q_values = agent.q_network.predict(state, verbose=0)[0]
             best_action = np.argmax(q_values)
             q_value = np.max(q_values)
             
@@ -117,13 +123,17 @@ def visualize_dqn_q_values(env, agent):
                 
             dx, dy = 0, 0
             if best_action == 0:  # Up
+                dx = 0
                 dy = -0.4
             elif best_action == 1:  # Down
+                dx = 0
                 dy = 0.4
             elif best_action == 2:  # Left
                 dx = -0.4
+                dy = 0
             elif best_action == 3:  # Right
                 dx = 0.4
+                dy = 0
                 
             arrow_color = plt.cm.viridis(min(q_value / 10, 1))
             
@@ -138,40 +148,68 @@ def visualize_dqn_q_values(env, agent):
     ax.set_title('DQN Q-Values and Optimal Actions')
     return fig
 
+
+# Main execution
 if __name__ == "__main__":
-    env = ComplexMazeEnv(maze_file='maze_5_5_simple.json')
+    # Initialize environment and agent
+    env = ComplexMazeEnv(maze_file='/Users/m.manso/Documents/GitHub/deep_rl_maze_navigation/maze_env/maze_16_16.json')# didnt work with normal path for me
     state_size = 2
     action_size = 4
     
-    agent = DQNAgent(
+    agent = DDQNAgent(
         state_size=state_size,
         action_size=action_size,
-        learning_rate=0.1,
-        gamma=0.99,
-        epsilon=1,
-        epsilon_decay=0.9995,
-        epsilon_min=0.01,
+        learning_rate=0.01,    # Increased learning rate
+        gamma=0.99,            # Reduced gamma for shorter-term rewards
+        epsilon=1.0,
+        epsilon_decay=0.99995,    # Faster exploration decay
+        epsilon_min=0.01,      # Higher minimum exploration
+        batch_size=64
     )
     
     print("Starting DQN training...")
     start_time = time.time()
-    
-    rewards, steps = train_dqn_agent(env, agent, num_episodes=500)
-    
+
+    # Train the agent
+    rewards, steps = train_dqn_agent(env, agent, num_episodes=300)
+
     print(f"Training completed in {(time.time() - start_time)/60:.2f} minutes")
-    
+
+    # Debug: Print rewards and steps
+    print("Rewards:", rewards)
+    print("Steps:", steps)
+
+    # Create output directory if it doesn't exist
     os.makedirs('results', exist_ok=True)
-    
-    learning_fig = visualize_learning(rewards, steps)
-    plt.savefig('results/dqn_learning_progress.png')
-    plt.close(learning_fig)
-    
-    optimal_path = get_optimal_path(env, agent)
-    path_fig = visualize_path(env, optimal_path)
-    plt.savefig('results/dqn_final_result.png')
-    plt.close(path_fig)
-    
-    q_values_fig = visualize_dqn_q_values(env, agent)
-    plt.savefig('results/dqn_q_values.png')
-    plt.close(q_values_fig)
-    
+
+    # Debug: Print current working directory and results path
+    print("Current Working Directory:", os.getcwd())
+    print("Results Directory:", os.path.abspath('results'))
+
+    # Visualize training progress
+    try:
+        learning_fig = visualize_learning(rewards, steps)
+        plt.savefig('experiments/results/ddqn_q_learning.png')
+        plt.close(learning_fig)
+        print("Saved learning progress plot.")
+    except Exception as e:
+        print(f"Error saving learning progress: {e}")
+
+    # Visualize optimal path
+    try:
+        optimal_path = get_optimal_path(env, agent)
+        path_fig = visualize_path(env, optimal_path)
+        plt.savefig('experiments/results/ddqn_q_path.png')
+        plt.close(path_fig)
+        print("Saved optimal path plot.")
+    except Exception as e:
+        print(f"Error saving optimal path: {e}")
+
+    # Visualize Q-values
+    try:
+        q_values_fig = visualize_dqn_q_values(env, agent)
+        plt.savefig('experiments/results/ddqn_q_values.png')
+        plt.close(q_values_fig)
+        print("Saved Q-values plot.")
+    except Exception as e:
+        print(f"Error saving Q-values: {e}")
