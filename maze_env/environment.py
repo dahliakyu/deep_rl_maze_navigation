@@ -138,7 +138,7 @@ class MazeEnv:
         return ax # Return the Axes object for further modifications if needed
 
 class ComplexMazeEnv:
-    def __init__(self, maze_file='maze_16_16.json'):
+    def __init__(self, maze_file='genrated_mazes/maze_16_16.json'):
         """
         Modified to load maze from JSON file
         """

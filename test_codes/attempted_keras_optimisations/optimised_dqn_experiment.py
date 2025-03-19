@@ -180,7 +180,7 @@ def visualize_dqn_q_values(env, agent):
 # Main execution 
 if __name__ == "__main__":
     # Initialize environment and agent
-    env = ComplexMazeEnv(maze_file='maze_5_5_simple.json')  # Using 5x5 maze
+    env = ComplexMazeEnv(maze_file='./generated_mazes/maze_5_5_simple.json')  # Using 5x5 maze
     state_size = 2
     action_size = 4
     

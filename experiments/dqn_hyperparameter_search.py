@@ -16,7 +16,7 @@ for lr, gamma, epsilon_decay in param_combinations:
     print(f"Training with lr={lr}, gamma={gamma}, epsilon_decay={epsilon_decay}")
 
     # Initialize environment and agent with current hyperparameters
-    env = ComplexMazeEnv(maze_file='maze_5_5_simple.json')
+    env = ComplexMazeEnv(maze_file='./generated_mazes/maze_5_5_simple.json')
     state_size = 2
     action_size = 4
 
@@ -31,7 +31,7 @@ for lr, gamma, epsilon_decay in param_combinations:
     )
 
     # Train the agent
-    rewards, steps = train_dqn_agent(env, agent, num_episodes=300)  # Reduce episodes for testing
+    rewards, steps = train_dqn_agent(env, agent, num_episodes=1000)  # Reduce episodes for testing
 
     # Save all data to a single JSON file after training is complete for this hyperparameter set.
     filename = f"all_episodes_lr_{lr}_gamma_{gamma}_decay_{epsilon_decay}.json"

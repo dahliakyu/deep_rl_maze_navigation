@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Main Training Loop with Visualization
-env = ComplexMazeEnv(maze_file='maze_5_5_mid.json') # Create an instance of the Maze environment
+env = ComplexMazeEnv(maze_file='genrated_mazes/maze_5_5_mid.json') # Create an instance of the Maze environment
 agent = QLearningAgent(env) # Create an instance of the Q-Learning agent, connected to the environment
 episodes = 1000  # Number of episodes to train the agent for
 

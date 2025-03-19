@@ -3,11 +3,8 @@ import numpy as np
 import time
 import sys
 import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from rl_algorithms.ddqn import DDQNAgent
+from rl_algorithms.ddqn_torch import DDQNAgent
 from maze_env.environment import ComplexMazeEnv
-import tensorflow as tf
 
 
 def train_dqn_agent(env, agent, num_episodes, update_target_every=30):
@@ -45,8 +42,8 @@ def train_dqn_agent(env, agent, num_episodes, update_target_every=30):
         agent.update_epsilon()
 
         # Always show progress
-        print(f"Ep {episode+1:4d} | Reward {total_reward:7.2f} | "
-              f"Steps {steps:4d} | Eps {agent.epsilon:.3f}")
+        if episode % 50 == 0: # Print episode completion status every 100 episodes
+            print(f"Episode {episode} complete. Total reward: {total_reward}, Steps: {steps}")
 
         rewards_history.append(total_reward)
         steps_history.append(steps)
@@ -152,7 +149,7 @@ def visualize_dqn_q_values(env, agent):
 # Main execution
 if __name__ == "__main__":
     # Initialize environment and agent
-    env = ComplexMazeEnv(maze_file='/Users/m.manso/Documents/GitHub/deep_rl_maze_navigation/maze_env/maze_16_16.json')# didnt work with normal path for me
+    env = ComplexMazeEnv(maze_file='genrated_mazes/maze_9_9.json')# didnt work with normal path for me
     state_size = 2
     action_size = 4
     
@@ -183,8 +180,8 @@ if __name__ == "__main__":
     os.makedirs('results', exist_ok=True)
 
     # Debug: Print current working directory and results path
-    print("Current Working Directory:", os.getcwd())
-    print("Results Directory:", os.path.abspath('results'))
+#    print("Current Working Directory:", os.getcwd())
+#    print("Results Directory:", os.path.abspath('results'))
 
     # Visualize training progress
     try:

@@ -5,8 +5,8 @@ import time
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from rl_algorithms.ddqn import DDQNAgent
-from experiments.dqn_experiment import train_dqn_agent
+from rl_algorithms.ddqn_torch import DDQNAgent
+from experiments.ddqn_torch_experiment import train_ddqn_agent
 from maze_env.environment import ComplexMazeEnv
 import json
 
@@ -22,7 +22,7 @@ for lr, gamma, epsilon_decay in param_combinations:
     print(f"Training with lr={lr}, gamma={gamma}, epsilon_decay={epsilon_decay}")
 
     # Initialize environment and agent with current hyperparameters
-    env = ComplexMazeEnv(maze_file='/Users/m.manso/Documents/GitHub/deep_rl_maze_navigation/maze_env/maze_16_16.json')
+    env = ComplexMazeEnv(maze_file='./generated_mazes/maze_5_5_simple.json')
     state_size = 2
     action_size = 4
 
@@ -37,7 +37,7 @@ for lr, gamma, epsilon_decay in param_combinations:
     )
 
     # Train the agent
-    rewards, steps = train_dqn_agent(env, agent, num_episodes=300)  # Reduce episodes for testing
+    rewards, steps = train_ddqn_agent(env, agent, num_episodes=300)  # Reduce episodes for testing
 
     # Save all data to a single JSON file after training is complete for this hyperparameter set.
     filename = f"all_episodes_lr_{lr}_gamma_{gamma}_decay_{epsilon_decay}.json"

@@ -139,7 +139,7 @@ def visualize_dqn_q_values(env, agent):
     return fig
 
 if __name__ == "__main__":
-    env = ComplexMazeEnv(maze_file='maze_5_5_simple.json')
+    env = ComplexMazeEnv(maze_file='./generated_mazes/maze_5_5_simple.json')
     state_size = 2
     action_size = 4
     

@@ -1,4 +1,4 @@
-keras
-matplotlib
 numpy
+matplotlib
 torch
+keras
