@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def train_dqn_agent(env, agent, num_episodes):
     rewards_history = []
     steps_history = []
-    max_steps = 500
+    max_steps = 1000
 
     for episode in range(num_episodes):
         state = env.reset()

@@ -5,8 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Main Training Loop with Visualization
-env = ComplexMazeEnv(maze_file='genrated_mazes/maze_5_5_mid.json') # Create an instance of the Maze environment
-agent = QLearningAgent(env) # Create an instance of the Q-Learning agent, connected to the environment
+env = ComplexMazeEnv(maze_file='generated_mazes/maze_9_9_hard.json') # Create an instance of the Maze environment
+state_size = 2
+action_size = 4
+agent = QLearningAgent(env, action_size=action_size) # Create an instance of the Q-Learning agent, connected to the environment
 episodes = 1000  # Number of episodes to train the agent for
 
 # Set up a list to store snapshots of Q-tables for visualization at different stages of learning
@@ -20,10 +22,10 @@ for episode in range(episodes): # Iterate through each episode
     total_reward = 0 # Initialize total reward for the episode to 0
     steps = 0 # Initialize steps for the episode to 0
 
-    while not done: # Run the episode until the goal is reached (done is True)
+    while not done:
         action = agent.choose_action(state) # Agent chooses an action based on current state (epsilon-greedy)
         next_state, reward, done = env.step(action) # Take the chosen action in the environment, get next state, reward, and done flag
-        agent.update_q_value(state, action, reward, next_state) # Update the Q-value based on the experience (SARSA update rule)
+        agent.update_q_value(state, action, reward, next_state) # Update the Q-value with max Q-value
         state = next_state # Update the current state to the next state
         total_reward += reward # Accumulate the reward
         steps += 1 # Increment step count
@@ -36,7 +38,7 @@ for episode in range(episodes): # Iterate through each episode
     if episode in snapshot_intervals:
         q_table_snapshots.append((episode, agent.q_table.copy())) # Store a copy of the Q-table along with the episode number
 
-    if episode % 100 == 0: # Print episode completion status every 100 episodes
+    if episode % 2 == 0: # Print episode completion status every 100 episodes
         print(f"Episode {episode} complete. Total reward: {total_reward}, Steps: {steps}")
 
 # Visualize learning progress (rewards and steps over episodes)
@@ -60,14 +62,14 @@ ax = fig.add_subplot(111, projection='3d') # Add a 3D subplot to the figure
 max_q_values = np.max(agent.q_table, axis=2) # Find the maximum Q-value for each state across all actions (axis=2 represents actions)
 
 # Create coordinate grids for plotting the 3D surface
-x = np.arange(5) # x-coordinates (columns)
-y = np.arange(5) # y-coordinates (rows)
+x = np.arange(env.size) # x-coordinates (columns)
+y = np.arange(env.size) # y-coordinates (rows)
 x, y = np.meshgrid(x, y) # Create a meshgrid from x and y coordinates
 
 # Prepare Z-data (Q-values) for the surface plot, masking out walls
 z = max_q_values.copy() # Copy the max Q-values
-for i in range(5): # Iterate through rows
-    for j in range(5): # Iterate through columns
+for i in range(env.size): # Iterate through rows
+    for j in range(env.size): # Iterate through columns
         if env.maze[i, j] == 1:  # If it's a wall
             z[i, j] = 0 # Set Q-value to 0 for walls so they appear at the base of the plot
 
@@ -84,8 +86,8 @@ ax.set_zlabel('Max Q-Value') # Z-axis label (Q-values)
 ax.set_title('3D Heatmap of Q-Values') # Set title of the 3D plot
 
 # Set the tick labels to represent grid coordinates
-ax.set_xticks(range(15)) # Set x-ticks to column numbers
-ax.set_yticks(range(15)) # Set y-ticks to row numbers
+ax.set_xticks(range(env.size)) # Set x-ticks to column numbers
+ax.set_yticks(range(env.size)) # Set y-ticks to row numbers
 
 plt.savefig('results/simple_q_q_values_3d.png') # Save the 3D Q-value heatmap as a PNG file
 plt.close(fig) # Close the figure

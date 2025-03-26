@@ -128,9 +128,9 @@ def maze_to_numpy(maze):
     return grid[1:-1, 1:-1]
 
 if __name__ == "__main__":
-    rows = 3
-    cols = 3
-    extra_passages = 25  # Adjust this value to increase complexity
+    rows = 5
+    cols = 5
+    extra_passages = 2  # Adjust this value to increase complexity
     maze = generate_maze(rows, cols, extra_passages)
     numpy_maze = maze_to_numpy(maze)
     print(numpy_maze)

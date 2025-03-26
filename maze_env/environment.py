@@ -138,7 +138,7 @@ class MazeEnv:
         return ax # Return the Axes object for further modifications if needed
 
 class ComplexMazeEnv:
-    def __init__(self, maze_file='genrated_mazes/maze_16_16.json'):
+    def __init__(self, maze_file):
         """
         Modified to load maze from JSON file
         """
@@ -177,15 +177,15 @@ class ComplexMazeEnv:
 
         reward = -0.01 # Small penalty for each step
 
-        # Calculate distance to goal before and after the step
-        distance_before = np.linalg.norm(np.array( (x, y)) - np.array(self.goal))
-        distance_after  = np.linalg.norm(np.array(self.current_state) - np.array(self.goal))
+        # # Calculate distance to goal before and after the step
+        # distance_before = np.linalg.norm(np.array( (x, y)) - np.array(self.goal))
+        # distance_after  = np.linalg.norm(np.array(self.current_state) - np.array(self.goal))
 
-        proximity_reward = 0.0  # Initialize proximity reward
-        if distance_after < distance_before: # Getting closer to goal
-            proximity_reward = 0.1 * (distance_before - distance_after)  # Small reward for proximity
+        # proximity_reward = 0.0  # Initialize proximity reward
+        # if distance_after < distance_before: # Getting closer to goal
+        #     proximity_reward = 0.1 * (distance_before - distance_after)  # Small reward for proximity
 
-        reward += proximity_reward
+        # reward += proximity_reward
 
 
         if self.current_state == self.goal:

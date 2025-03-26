@@ -6,7 +6,7 @@ import torch
 from maze_env.environment import ComplexMazeEnv
 from rl_algorithms.ddqn_torch import DDQNAgent
 
-def train_ddqn_agent(env, agent, num_episodes, max_steps=250):
+def train_ddqn_agent(env, agent, num_episodes, max_steps=2000):
     rewards_history = []
     steps_history = []
 

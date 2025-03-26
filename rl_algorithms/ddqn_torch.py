@@ -9,15 +9,17 @@ import torch.nn.functional as F
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 32)
-        self.bn1 = nn.BatchNorm1d(32)
+        self.bn_input = nn.BatchNorm1d(state_size)
+        self.fc1 = nn.Linear(state_size, 128)
+        self.bn1 = nn.BatchNorm1d(128)
         self.dropout1 = nn.Dropout(0.3)
-        self.fc2 = nn.Linear(32, 32)
-        self.bn2 = nn.BatchNorm1d(32)
+        self.fc2 = nn.Linear(128, 128)
+        self.bn2 = nn.BatchNorm1d(128)
         self.dropout2 = nn.Dropout(0.2)
-        self.fc3 = nn.Linear(32, action_size)
+        self.fc3 = nn.Linear(128, action_size)
         
     def forward(self, x):
+        x = self.bn_input(x)
         x = F.relu(self.fc1(x))
         x = self.bn1(x)
         x = self.dropout1(x)
@@ -26,24 +28,11 @@ class DQN(nn.Module):
         x = self.dropout2(x)
         return self.fc3(x)
     
-    def regularization_loss(self):
-        l1_lambda_kernel = 0.0005
-        l2_lambda_kernel = 0.001
-        l2_lambda_bias = 0.001
-        reg_loss = 0.0
-        
-        for name, param in self.named_parameters():
-            if 'weight' in name:
-                reg_loss += l1_lambda_kernel * torch.norm(param, 1)
-                reg_loss += l2_lambda_kernel * torch.norm(param, 2) ** 2
-            elif 'bias' in name:
-                reg_loss += l2_lambda_bias * torch.norm(param, 2) ** 2
-        return reg_loss
 
 class DDQNAgent:
     def __init__(self, state_size, action_size, learning_rate=0.001, gamma=0.99,
-                 epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1,
-                 replay_buffer_size=10000, batch_size=64, target_update_freq=10):
+                 epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.05,
+                 replay_buffer_size=20000, batch_size=128, target_update_freq=100):
         
         self.state_size = state_size
         self.action_size = action_size
@@ -77,10 +66,13 @@ class DDQNAgent:
             return random.randrange(self.action_size)
         
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        
+        # Ensure eval mode during inference
         self.q_network.eval()
         with torch.no_grad():
             q_values = self.q_network(state)
-        self.q_network.train()
+        self.q_network.train()  # Switch back to train mode
+        
         return q_values.argmax().item()
 
     def replay(self):
@@ -114,8 +106,7 @@ class DDQNAgent:
         
         # Calculate loss
         loss = self.criterion(current_q, targets)
-        reg_loss = self.q_network.regularization_loss()
-        total_loss = loss + reg_loss
+        total_loss = loss
         
         # Optimize
         self.optimizer.zero_grad()
