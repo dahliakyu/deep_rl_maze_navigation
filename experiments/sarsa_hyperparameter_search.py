@@ -99,7 +99,7 @@ def save_results(complexity, alpha, gamma, epsilon, rewards, steps, passages):
         "avg_steps": steps
     }
     
-    filename = (f"./results/sarsa_{MAZE_SIZE[0]*2-1}x{MAZE_SIZE[1]*2-1}_comp_{complexity}_"
+    filename = (f"./results/auto_gen_TD/sarsa_{MAZE_SIZE[0]*2-1}x{MAZE_SIZE[1]*2-1}_comp_{complexity}_"
                 f"a_{alpha}_g_{gamma}_e_{epsilon}.json")
     
     with open(filename, 'w') as f:

@@ -154,7 +154,7 @@ if __name__ == "__main__":
     os.makedirs('experiments/results', exist_ok=True)
     
     # Initialize environment and agent
-    env = ComplexMazeEnv(maze_file='./genrated_mazes/maze_9_9.json')
+    env = ComplexMazeEnv(maze_config='./manually_drawn_mazes/maze_9_9.json')
     state_size = 2  # (x, y) coordinates
     action_size = 4  # Up, Down, Left, Right
     

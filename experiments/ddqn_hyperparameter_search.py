@@ -5,7 +5,7 @@ from maze_env.environment import ComplexMazeEnv
 import json
 
 # Define hyperparameter ranges
-learning_rates = [0.002]
+learning_rates = [0.001, 0.002, 0.0005]
 gammas = [0.90, 0.95, 0.99]
 epsilon_decays = [0.95]
 
@@ -16,7 +16,7 @@ for lr, gamma, epsilon_decay in param_combinations:
     print(f"Training with lr={lr}, gamma={gamma}, epsilon_decay={epsilon_decay}")
 
     # Initialize environment and agent with current hyperparameters
-    env = ComplexMazeEnv(maze_file='./manually_drawn_mazes/maze_9_9.json')
+    env = ComplexMazeEnv(maze_config='./manually_drawn_mazes/maze_9_9.json')
     state_size = 2
     action_size = 4
 

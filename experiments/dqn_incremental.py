@@ -120,9 +120,6 @@ def train_incrementally():
                     
         # Save checkpoint and training history
         torch.save(agent.q_network.state_dict(), f"dqn_{size}x{size}.pth")
-        # with open("training_history.json", "w") as f:
-        #     json.dump(training_history, f, indent=2)
-        # print(f"Saved model and training history for {size}x{size} mazes")
 
 # 3. Execute Training
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Main Training Loop with Visualization
-env = ComplexMazeEnv(maze_file='./generated_mazes/maze_9_9_hard.json') # Create an instance of the Maze environment
+env = ComplexMazeEnv(maze_config='./manually_drawn_mazes/maze_9_9.json') # Create an instance of the Maze environment
 state_size = 2
 action_size = 4
 agent = SarsaAgent(env, action_size=action_size) # Create an instance of the Q-Learning agent, connected to the environment

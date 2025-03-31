@@ -69,8 +69,6 @@ class QLearningAgent:
         max_q_next = np.max(self.q_table[next_x, next_y])  # Find the maximum Q-value among all possible actions in the next state (best estimated future reward)
         # Q-learning update rule:
         self.q_table[x, y, action] = self.q_table[x, y, action] + self.alpha * (reward + self.gamma * max_q_next - self.q_table[x, y, action])
-        # Q(s, a) = Q(s, a) + alpha * (target - current_Q)
-        # target = reward + gamma * max_a' Q(s', a')
 
     def get_optimal_path(self):
         """
