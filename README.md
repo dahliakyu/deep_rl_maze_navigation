@@ -37,6 +37,7 @@ Before using any of the scripts please follow:
 ```bash
 pip install -e .
 ```
+in the main directory
 ## Script Running Instruction
 
 For methodologies of the project, please refer to the written paper named as deep_rl_maze_navigation.pdf. The research on the Q-learning and SARSA agents have been completed and further improvement for DQN and DDQN agents is planned for the future. 
