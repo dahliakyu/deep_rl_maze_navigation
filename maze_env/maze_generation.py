@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import json
+import os
 
 def generate_maze(rows, cols, extra_passages=0):
     """
@@ -130,7 +131,7 @@ def maze_to_numpy(maze):
 if __name__ == "__main__":
     rows = 5
     cols = 5
-    extra_passages = 2  # Adjust this value to increase complexity
+    extra_passages = 16  # Adjust this value to increase complexity
     maze = generate_maze(rows, cols, extra_passages)
     numpy_maze = maze_to_numpy(maze)
     print(numpy_maze)

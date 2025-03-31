@@ -7,10 +7,9 @@ import os
 from rl_algorithms.dqn import DQNAgent
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def train_dqn_agent(env, agent, num_episodes):
+def train_dqn_agent(env, agent, num_episodes, max_steps = 1000):
     rewards_history = []
     steps_history = []
-    max_steps = 1000
 
     for episode in range(num_episodes):
         state = env.reset()
@@ -38,7 +37,7 @@ def train_dqn_agent(env, agent, num_episodes):
         agent.update_epsilon()
 
         if episode % 50 == 0: # Print episode completion status every 100 episodes
-            print(f"Episode {episode} complete. Total reward: {total_reward}, Steps: {steps}")
+            print(f"Episode {episode} complete. Total reward: {total_reward}, Steps: {steps}", f"Epsilon: {agent.epsilon:.3f}, Goal: {done}")
 
         rewards_history.append(total_reward)
         steps_history.append(steps)

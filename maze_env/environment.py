@@ -138,13 +138,14 @@ class MazeEnv:
         return ax # Return the Axes object for further modifications if needed
 
 class ComplexMazeEnv:
-    def __init__(self, maze_file):
+    def __init__(self, maze_config):
         """
         Modified to load maze from JSON file
         """
-        with open(maze_file, 'r') as f:
-            self.maze = np.array(json.load(f))
-            
+        if isinstance(maze_config, np.ndarray):
+            self.maze = maze_config
+        elif isinstance(maze_config, str):
+            self.maze = np.array(json.load(open(maze_config, 'r')))        
         self.size = self.maze.shape[0]
         self.start = (0, 0)
         self.goal = (self.size-1, self.size-1)

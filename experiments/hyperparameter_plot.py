@@ -9,8 +9,9 @@ def plot_hyperparameter_comparisons(directory='./'):
     files = [f for f in os.listdir(directory) if f.endswith(".json")]
     
     # Regex pattern to extract hyperparameters
-    pattern = r"all_episodes_lr_([0-9.]+)_gamma_([0-9.]+)_decay_([0-9.]+)\.json"
-    
+    #pattern = r"all_episodes_lr_([0-9.]+)_gamma_([0-9.]+)_decay_([0-9.]+)\.json"
+    pattern = r"qlearn_alpha_([0-9.]+)_gamma_([0-9.]+)_epsilon_([0-9.]+)\.json"
+
     # Data storage structure
     data = {}
     
@@ -30,7 +31,7 @@ def plot_hyperparameter_comparisons(directory='./'):
             data[key] = {}
         data[key][lr] = {
             'steps': content['steps_history'],
-            'rewards': content['reward_history']
+            'rewards': content['rewards_history']
         }
 
     # Create figures with subplots
@@ -53,9 +54,9 @@ def plot_hyperparameter_comparisons(directory='./'):
 
     # Plotting configuration
     lr_colors = {
-        '0.0005': 'blue',
-        '0.001': 'green',
-        '0.002': 'red'
+        '0.1': 'blue',
+        '0.2': 'green',
+        '0.3': 'red'
     }
     
     # Plot data in subplots

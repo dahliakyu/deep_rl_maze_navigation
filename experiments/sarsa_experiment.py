@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from maze_env.environment import MazeEnv, ComplexMazeEnv
-from rl_algorithms.sarsa import QLearningAgent
+from rl_algorithms.sarsa import SarsaAgent
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 env = ComplexMazeEnv(maze_file='./generated_mazes/maze_9_9_hard.json') # Create an instance of the Maze environment
 state_size = 2
 action_size = 4
-agent = QLearningAgent(env, action_size=action_size) # Create an instance of the Q-Learning agent, connected to the environment
-episodes = 1000  # Number of episodes to train the agent for
+agent = SarsaAgent(env, action_size=action_size) # Create an instance of the Q-Learning agent, connected to the environment
+episodes = 500  # Number of episodes to train the agent for
 
 # Set up a list to store snapshots of Q-tables for visualization at different stages of learning
 q_table_snapshots = []

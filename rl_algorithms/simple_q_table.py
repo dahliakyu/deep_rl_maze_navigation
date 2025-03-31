@@ -179,11 +179,11 @@ class QLearningAgent:
         # Plot the path as a line with markers
         path_x = [p[1] for p in path] # Extract column indices from path states
         path_y = [p[0] for p in path] # Extract row indices from path states
-        ax.plot(path_x, path_y, 'o-', color='blue', markersize=10, alpha=0.6) # Plot the path with blue circles and lines
+        ax.plot(path_x, path_y, 'o-', color='blue', markersize=20, alpha=0.6) # Plot the path with blue circles and lines
 
         # Number the steps along the path
         for i, (y, x) in enumerate(zip(path_y, path_x)): # Iterate through path coordinates and index
-            ax.text(x, y, str(i), fontsize=12, ha='center', va='center', color='red') # Add step number text at each path point
+            ax.text(x, y, str(i), fontsize=12, ha='center', va='center', color='white') # Add step number text at each path point
 
         ax.set_title("Optimal Path") # Set plot title
         return ax # Return the Axes object

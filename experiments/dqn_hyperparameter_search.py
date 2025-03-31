@@ -16,7 +16,7 @@ for lr, gamma, epsilon_decay in param_combinations:
     print(f"Training with lr={lr}, gamma={gamma}, epsilon_decay={epsilon_decay}")
 
     # Initialize environment and agent with current hyperparameters
-    env = ComplexMazeEnv(maze_file='./generated_mazes/maze_9_9.json')
+    env = ComplexMazeEnv(maze_file='./generated_mazes/maze_9_9_hard.json')
     state_size = 2
     action_size = 4
 
